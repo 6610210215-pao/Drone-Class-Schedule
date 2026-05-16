@@ -1,0 +1,1038 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DroneBot - Students</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Kanit", sans-serif;
+        background-color: #f8fafc;
+      }
+      .student-card {
+        transition: all 0.25s ease;
+        border: 1px solid #f1f5f9;
+        cursor: pointer;
+      }
+      .student-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 28px -10px rgba(15, 23, 42, 0.22);
+        border-color: #fecaca;
+      }
+
+      /* Modal animation */
+      #detailModal {
+        transition: opacity 0.2s ease;
+      }
+      #detailModal.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* Avatar gradient */
+      .avatar-circle {
+        background: linear-gradient(135deg, #e63946 0%, #b91c1c 100%);
+      }
+
+      /* Edit mode toggle */
+      .view-field {
+        display: block;
+      }
+      .edit-field {
+        display: none;
+      }
+      .edit-mode .view-field {
+        display: none;
+      }
+      .edit-mode .edit-field {
+        display: block;
+      }
+
+      .edit-input {
+        width: 100%;
+        padding: 8px 12px;
+        background: #f8fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        font-family: "Kanit", sans-serif;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .edit-input:focus {
+        border-color: #e63946;
+        background: white;
+      }
+    </style>
+    <style>body { visibility: hidden; }</style>
+  </head>
+  <body class="flex flex-col md:flex-row min-h-screen">
+    <script src="./js/auth-guard.js"></script>
+    <div id="main-navbar"></div>
+
+    <main class="flex-1">
+      <header class="bg-white border-b border-gray-100 px-6 py-10 md:px-12">
+        <div class="max-w-5xl">
+          <h1 class="text-3xl md:text-4xl font-black text-gray-900">
+            Student List
+          </h1>
+          <p class="mt-2 text-gray-400">
+            View course and regular students in one place.
+          </p>
+        </div>
+
+       <div class="mt-8 max-w-3xl">
+  <div class="flex flex-col md:flex-row gap-3">
+    
+    <div class="relative flex-1 group">
+      <input
+        type="text"
+        id="studentSearchInput"
+        placeholder="Search by full name..."
+        class="w-full rounded-[2rem] border-2 border-transparent bg-gray-50 p-5 pl-14 outline-none transition-all focus:border-red-500 focus:bg-white"
+      />
+      <i class="fas fa-search absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-red-500"></i>
+    </div>
+
+    <button
+      onclick="loadStudentList()"
+      class="rounded-[1.5rem] bg-gray-900 px-8 py-4 font-bold text-white transition-all hover:bg-red-600"
+    >
+      Search
+    </button>
+
+  </div>
+</div>
+      </header>
+
+      <section class="p-6 md:p-10">
+        <div
+          class="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
+        >
+          <h2 class="text-xl font-bold text-gray-800">All Students</h2>
+          <div class="flex items-center gap-3">
+            <button
+              onclick="loadStudentList(true)"
+              class="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-5 py-3 text-sm font-bold text-gray-500 shadow-sm transition-all hover:border-red-100 hover:bg-red-50 hover:text-red-600"
+            >
+              <i class="fas fa-rotate"></i>
+              Refresh
+            </button>
+            <button
+              onclick="openAddStudentModal()"
+              class="inline-flex items-center gap-2 rounded-2xl bg-gray-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-red-600"
+            >
+              <i class="fas fa-plus"></i>
+              New Student
+            </button>
+          </div>
+        </div>
+
+        <div
+          id="studentList"
+          class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3"
+        >
+          <div
+            class="col-span-full rounded-[2rem] border-2 border-dashed border-gray-100 bg-white py-16 text-center text-gray-300"
+          >
+            Loading student data...
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ─── Student Detail / Edit Modal ─── -->
+    <div
+      id="detailModal"
+      class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden"
+      >
+        <!-- Modal Header -->
+        <div class="bg-gray-900 px-8 py-6 flex items-center justify-between">
+          <h2 class="text-white font-black text-xl">Student Details</h2>
+          <button
+            onclick="closeDetailModal()"
+            class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all"
+          >
+            <i class="fas fa-times text-sm"></i>
+          </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="p-8">
+          <!-- Avatar + Name row -->
+          <div class="flex items-center gap-5 mb-8">
+            <div
+              id="modal-avatar"
+              class="avatar-circle w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-black flex-shrink-0"
+            ></div>
+            <div>
+              <p
+                id="modal-fullname"
+                class="text-2xl font-black text-gray-900"
+              ></p>
+              <p
+                id="modal-type-badge"
+                class="text-sm font-medium text-red-500 mt-0.5"
+              ></p>
+            </div>
+          </div>
+
+          <!-- Info grid -->
+          <div
+            id="modal-form"
+            class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5"
+          >
+            <!-- Student ID (read-only always) -->
+            <div class="col-span-2 md:col-span-1">
+              <p
+                class="text-[11px] font-black uppercase tracking-widest text-gray-300 mb-1"
+              >
+                Student ID
+              </p>
+              <p
+                id="view-studentId"
+                class="view-field text-gray-700 font-medium"
+              ></p>
+            </div>
+
+            <!-- Type -->
+            <div>
+              <p
+                class="text-[11px] font-black uppercase tracking-widest text-gray-300 mb-1"
+              >
+                Type
+              </p>
+              <p
+                id="view-type"
+                class="view-field text-gray-700 font-medium"
+              ></p>
+              <select id="edit-type" class="edit-field edit-input">
+                <option value="Course">Course Class</option>
+                <option value="Regular">Regular Class</option>
+              </select>
+            </div>
+
+            <!-- Full Name Thai -->
+            <div>
+              <p
+                class="text-[11px] font-black uppercase tracking-widest text-gray-300 mb-1"
+              >
+                Full Name (Thai)
+              </p>
+              <p
+                id="view-name"
+                class="view-field text-gray-700 font-medium"
+              ></p>
+              <input
+                id="edit-name"
+                type="text"
+                class="edit-field edit-input"
+                placeholder="ชื่อ-นามสกุล"
+              />
+            </div>
+
+            <!-- Nickname Thai -->
+            <div>
+              <p
+                class="text-[11px] font-black uppercase tracking-widest text-gray-300 mb-1"
+              >
+                Nickname (Thai)
+              </p>
+              <p
+                id="view-nickname"
+                class="view-field text-gray-700 font-medium"
+              ></p>
+              <input
+                id="edit-nickname"
+                type="text"
+                class="edit-field edit-input"
+                placeholder="ชื่อเล่น"
+              />
+            </div>
+
+            <!-- English Name -->
+            <div>
+              <p
+                class="text-[11px] font-black uppercase tracking-widest text-gray-300 mb-1"
+              >
+                English Name
+              </p>
+              <p
+                id="view-nameEng"
+                class="view-field text-gray-700 font-medium"
+              ></p>
+              <input
+                id="edit-nameEng"
+                type="text"
+                class="edit-field edit-input"
+                placeholder="English name"
+              />
+            </div>
+
+            <!-- English Nickname -->
+            <div>
+              <p
+                class="text-[11px] font-black uppercase tracking-widest text-gray-300 mb-1"
+              >
+                English Nickname
+              </p>
+              <p
+                id="view-nicknameEng"
+                class="view-field text-gray-700 font-medium"
+              ></p>
+              <input
+                id="edit-nicknameEng"
+                type="text"
+                class="edit-field edit-input"
+                placeholder="English nickname"
+              />
+            </div>
+
+            <!-- Phone -->
+            <div>
+              <p
+                class="text-[11px] font-black uppercase tracking-widest text-gray-300 mb-1"
+              >
+                Phone
+              </p>
+              <p
+                id="view-phone"
+                class="view-field text-gray-700 font-medium"
+              ></p>
+              <input
+                id="edit-phone"
+                type="text"
+                class="edit-field edit-input"
+                placeholder="Phone number"
+              />
+            </div>
+          </div>
+
+          <!-- Save status -->
+          <div
+            id="save-status"
+            class="hidden mt-4 p-3 rounded-xl text-sm font-bold text-center"
+          ></div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="px-8 pb-8 flex gap-3 justify-end">
+          <!-- View mode: show Edit button -->
+          <div id="footer-view" class="flex gap-3">
+            <button
+              onclick="closeDetailModal()"
+              class="px-7 py-3 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all"
+            >
+              Close
+            </button>
+            <button
+              onclick="enterEditMode()"
+              class="px-7 py-3 bg-gray-900 text-white rounded-2xl font-bold hover:bg-red-600 transition-all"
+            >
+              <i class="fas fa-pen mr-2 text-sm"></i>Edit
+            </button>
+          </div>
+          <!-- Edit mode: show Cancel + Save -->
+          <div id="footer-edit" class="hidden flex gap-3">
+            <button
+              onclick="cancelEditMode()"
+              class="px-7 py-3 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onclick="saveStudentEdit()"
+              id="save-btn"
+              class="px-7 py-3 bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 transition-all"
+            >
+              <i class="fas fa-save mr-2 text-sm"></i>Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ─── Add Student Modal ─── -->
+    <div
+      id="addStudentModal"
+      class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden"
+      >
+        <div class="bg-gray-900 px-8 py-6 flex items-center justify-between">
+          <h2 class="text-white font-black text-xl">Add New Student</h2>
+          <button
+            onclick="closeAddStudentModal()"
+            class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all"
+          >
+            <i class="fas fa-times text-sm"></i>
+          </button>
+        </div>
+
+        <div class="p-8">
+          <!-- Student Type Toggle -->
+          <div class="mb-6">
+            <p
+              class="text-[11px] font-black uppercase tracking-widest text-gray-300 mb-2"
+            >
+              Student Type
+            </p>
+            <div class="flex gap-3">
+              <button
+                id="type-btn-course"
+                onclick="setAddStudentType('Course')"
+                class="flex-1 py-3 rounded-2xl font-bold text-sm bg-gray-900 text-white transition-all"
+              >
+                Course Class
+              </button>
+              <button
+                id="type-btn-regular"
+                onclick="setAddStudentType('Regular')"
+                class="flex-1 py-3 rounded-2xl font-bold text-sm bg-gray-100 text-gray-500 transition-all hover:bg-gray-200"
+              >
+                Regular Class
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+            <!-- Full Name Thai -->
+            <div class="col-span-2">
+              <p
+                class="text-[11px] font-black uppercase tracking-widest text-gray-300 mb-1"
+              >
+                Full Name (Thai) *
+              </p>
+              <input
+                id="add-name"
+                type="text"
+                placeholder="ชื่อ-นามสกุล"
+                class="w-full px-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl font-[Kanit] text-sm outline-none focus:border-red-500 focus:bg-white transition-all"
+              />
+            </div>
+
+            <!-- Nickname Thai -->
+            <div>
+              <p
+                class="text-[11px] font-black uppercase tracking-widest text-gray-300 mb-1"
+              >
+                Nickname (Thai)
+              </p>
+              <input
+                id="add-nickname"
+                type="text"
+                placeholder="ชื่อเล่น"
+                class="w-full px-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl font-[Kanit] text-sm outline-none focus:border-red-500 focus:bg-white transition-all"
+              />
+            </div>
+
+            <!-- English Name -->
+            <div>
+              <p
+                class="text-[11px] font-black uppercase tracking-widest text-gray-300 mb-1"
+              >
+                English Name
+              </p>
+              <input
+                id="add-nameEng"
+                type="text"
+                placeholder="Full name"
+                class="w-full px-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl font-[Kanit] text-sm outline-none focus:border-red-500 focus:bg-white transition-all"
+              />
+            </div>
+
+            <!-- English Nickname -->
+            <div>
+              <p
+                class="text-[11px] font-black uppercase tracking-widest text-gray-300 mb-1"
+              >
+                English Nickname
+              </p>
+              <input
+                id="add-nicknameEng"
+                type="text"
+                placeholder="Nickname"
+                class="w-full px-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl font-[Kanit] text-sm outline-none focus:border-red-500 focus:bg-white transition-all"
+              />
+            </div>
+
+            <!-- Phone -->
+            <div>
+              <p
+                class="text-[11px] font-black uppercase tracking-widest text-gray-300 mb-1"
+              >
+                Phone
+              </p>
+              <input
+                id="add-phone"
+                type="text"
+                placeholder="0812345678"
+                class="w-full px-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl font-[Kanit] text-sm outline-none focus:border-red-500 focus:bg-white transition-all"
+              />
+            </div>
+
+            <!-- Course (แสดงเฉพาะ Course type) -->
+            <div id="add-course-field">
+              <p
+                class="text-[11px] font-black uppercase tracking-widest text-gray-300 mb-1"
+              >
+                Course
+              </p>
+              <select
+                id="add-courseId"
+                class="w-full px-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl font-[Kanit] text-sm outline-none focus:border-red-500 focus:bg-white transition-all"
+              >
+                <option value="">— Select course —</option>
+              </select>
+            </div>
+          </div>
+
+          <div
+            id="add-save-status"
+            class="hidden mt-4 p-3 rounded-xl text-sm font-bold text-center"
+          ></div>
+        </div>
+
+        <div class="px-8 pb-8 flex gap-3 justify-end">
+          <button
+            onclick="closeAddStudentModal()"
+            class="px-7 py-3 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all"
+          >
+            Cancel
+          </button>
+          <button
+            onclick="submitAddStudent()"
+            id="add-save-btn"
+            class="px-7 py-3 bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 transition-all"
+          >
+            <i class="fas fa-plus mr-2 text-sm"></i>Add Student
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="./js/config.js"></script>
+    <script src="./js/main-navbar.js"></script>
+    <script>
+      let currentStudentData = null;
+      let studentsCache = [];
+
+      document.addEventListener("DOMContentLoaded", () => loadStudentList());
+
+      function getStudentTypeLabel(type) {
+        const t = (type || "").toString().toLowerCase();
+        if (t === "regular") return "Regular Class";
+        if (t === "course") return "Course Class";
+        return "Student";
+      }
+
+      function normalizeStudents(students, fallbackType) {
+        return (students || []).map((s) => ({
+          ...s,
+          type: s.type || fallbackType,
+        }));
+      }
+
+      function uniqueStudents(students) {
+        const seen = new Set();
+        return students.filter((s) => {
+          const key =
+            s.studentId || `${s.name || s.fullNameThai || ""}-${s.phone || ""}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      }
+
+      function loadStudentList(forceAll = false) {
+        const query = document
+          .getElementById("studentSearchInput")
+          .value.trim();
+        const list = document.getElementById("studentList");
+        list.innerHTML =
+          '<div class="col-span-full rounded-[2rem] border-2 border-dashed border-gray-100 bg-white py-16 text-center text-gray-300">Loading student data...</div>';
+
+        if (query && !forceAll) {
+          fetch(scriptURL, {
+            method: "POST",
+            body: JSON.stringify({ action: "searchStudents", query }),
+          })
+            .then((r) => r.json())
+            .then((r) => renderStudents(r.data || []))
+            .catch(showStudentError);
+          return;
+        }
+
+        if (forceAll) document.getElementById("studentSearchInput").value = "";
+
+        Promise.all([
+          fetch(scriptURL, {
+            method: "POST",
+            body: JSON.stringify({
+              action: "getStudentsByType",
+              type: "course",
+              courseId: "",
+            }),
+          }).then((r) => r.json()),
+          fetch(scriptURL, {
+            method: "POST",
+            body: JSON.stringify({
+              action: "getStudentsByType",
+              type: "regular",
+              courseId: "",
+            }),
+          }).then((r) => r.json()),
+        ])
+          .then(([cr, rr]) => {
+            renderStudents(
+              uniqueStudents([
+                ...normalizeStudents(cr.data, "course"),
+                ...normalizeStudents(rr.data, "regular"),
+              ]),
+            );
+          })
+          .catch(showStudentError);
+      }
+
+      function showStudentError() {
+        document.getElementById("studentList").innerHTML =
+          '<div class="col-span-full rounded-[2rem] border-2 border-dashed border-red-100 bg-white py-16 text-center text-red-400">Unable to load student data</div>';
+      }
+
+      function renderStudents(students) {
+        const list = document.getElementById("studentList");
+        if (!students || students.length === 0) {
+          list.innerHTML = `<div class="col-span-full rounded-[2rem] border-2 border-dashed border-gray-100 bg-white py-16 text-center text-gray-300">No students found</div>`;
+          return;
+        }
+        studentsCache = students;
+        list.innerHTML = students
+          .map((s, idx) => {
+            const fullName = s.name || s.fullNameThai || "-";
+            const englishName = s.nameEng || "-";
+            const nickname = s.nickname || "-";
+            const englishNick = s.nicknameEng || "-";
+            const studentId = s.studentId || "-";
+            const phone = s.phone || "No phone number";
+            const typeLabel = getStudentTypeLabel(s.type);
+            const initials = fullName !== "-" ? fullName.slice(0, 2) : "??";
+
+            return `
+          <article class="student-card rounded-[2rem] bg-white p-6 shadow-sm"
+                   onclick="openDetailModal(${idx})">
+            <div class="mb-5 flex items-start justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <div class="avatar-circle w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-black flex-shrink-0">${initials}</div>
+                <div>
+                  <h3 class="text-lg font-black text-gray-900">${fullName}</h3>
+                  <p class="text-sm font-medium text-red-500">${englishName}</p>
+                </div>
+              </div>
+              <span class="rounded-full bg-gray-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-gray-400 whitespace-nowrap">${typeLabel}</span>
+            </div>
+            <div class="space-y-3 text-sm font-medium text-gray-400">
+              <p><i class="fas fa-id-card w-6 text-gray-300"></i>${studentId}</p>
+              <p><i class="fas fa-tag w-6 text-gray-300"></i>${nickname} (${englishNick})</p>
+              <p><i class="fas fa-phone w-6 text-gray-300"></i>${phone}</p>
+            </div>
+            <div class="mt-5 pt-4 border-t border-gray-50 flex justify-end">
+              <span class="text-xs font-bold text-gray-300 group-hover:text-red-400 transition-colors">
+                <i class="fas fa-chevron-right mr-1"></i>View Details
+              </span>
+            </div>
+          </article>`;
+          })
+          .join("");
+      }
+
+      /* ─── Modal: open ─── */
+      function openDetailModal(idx) {
+        const s = studentsCache[idx];
+        if (!s) return;
+        currentStudentData = s;
+
+        const fullName = s.name || s.fullNameThai || "-";
+        const initials = fullName !== "-" ? fullName.slice(0, 2) : "??";
+
+        // Avatar & header
+        document.getElementById("modal-avatar").innerText = initials;
+        document.getElementById("modal-fullname").innerText = fullName;
+        document.getElementById("modal-type-badge").innerText =
+          getStudentTypeLabel(s.type);
+
+        // Populate view fields
+        document.getElementById("view-studentId").innerText =
+          s.studentId || "-";
+        document.getElementById("view-type").innerText = getStudentTypeLabel(
+          s.type,
+        );
+        document.getElementById("view-name").innerText =
+          s.name || s.fullNameThai || "-";
+        document.getElementById("view-nickname").innerText = s.nickname || "-";
+        document.getElementById("view-nameEng").innerText = s.nameEng || "-";
+        document.getElementById("view-nicknameEng").innerText =
+          s.nicknameEng || "-";
+        document.getElementById("view-phone").innerText =
+          s.phone || "No phone number";
+
+        // Pre-fill edit fields
+        document.getElementById("edit-name").value =
+          s.name || s.fullNameThai || "";
+        document.getElementById("edit-nickname").value = s.nickname || "";
+        document.getElementById("edit-nameEng").value = s.nameEng || "";
+        document.getElementById("edit-nicknameEng").value = s.nicknameEng || "";
+        document.getElementById("edit-phone").value = s.phone || "";
+        document.getElementById("edit-type").value = s.type || "Course";
+
+        // Make sure we're in view mode
+        exitEditModeUI();
+        hideSaveStatus();
+
+        document.getElementById("detailModal").classList.remove("hidden");
+      }
+
+      /* ─── Modal: close ─── */
+      function closeDetailModal() {
+        document.getElementById("detailModal").classList.add("hidden");
+        currentStudentData = null;
+      }
+
+      /* ─── Edit mode UI helpers ─── */
+      function enterEditMode() {
+        document.getElementById("modal-form").classList.add("edit-mode");
+        document.getElementById("footer-view").classList.add("hidden");
+        document.getElementById("footer-edit").classList.remove("hidden");
+      }
+
+      function cancelEditMode() {
+        exitEditModeUI();
+        hideSaveStatus();
+      }
+
+      function exitEditModeUI() {
+        document.getElementById("modal-form").classList.remove("edit-mode");
+        document.getElementById("footer-view").classList.remove("hidden");
+        document.getElementById("footer-edit").classList.add("hidden");
+      }
+
+      function hideSaveStatus() {
+        const el = document.getElementById("save-status");
+        el.classList.add("hidden");
+        el.className =
+          "hidden mt-4 p-3 rounded-xl text-sm font-bold text-center";
+      }
+
+      /* ─── Save to Google Sheets ─── */
+      function saveStudentEdit() {
+        if (!currentStudentData) return;
+
+        const btn = document.getElementById("save-btn");
+        btn.disabled = true;
+        btn.innerHTML =
+          '<i class="fas fa-spinner fa-spin mr-2 text-sm"></i>Saving...';
+
+        const payload = {
+          action: "updateStudent",
+          studentId: currentStudentData.studentId,
+          name: document.getElementById("edit-name").value.trim(),
+          nickname: document.getElementById("edit-nickname").value.trim(),
+          nameEng: document.getElementById("edit-nameEng").value.trim(),
+          nicknameEng: document.getElementById("edit-nicknameEng").value.trim(),
+          phone: document.getElementById("edit-phone").value.trim(),
+          type: document.getElementById("edit-type").value,
+        };
+
+        fetch(scriptURL, { method: "POST", body: JSON.stringify(payload) })
+          .then((r) => r.json())
+          .then((res) => {
+            btn.disabled = false;
+            btn.innerHTML =
+              '<i class="fas fa-save mr-2 text-sm"></i>Save Changes';
+
+            const statusEl = document.getElementById("save-status");
+            if (res.status === "success") {
+              statusEl.className =
+                "block mt-4 p-3 rounded-xl text-sm font-bold text-center bg-green-50 text-green-600 border border-green-100";
+              statusEl.innerHTML =
+                '<i class="fas fa-check-circle mr-2"></i>Saved successfully!';
+
+              // Update local data & view fields
+              currentStudentData = { ...currentStudentData, ...payload };
+              document.getElementById("view-name").innerText =
+                payload.name || "-";
+              document.getElementById("view-nickname").innerText =
+                payload.nickname || "-";
+              document.getElementById("view-nameEng").innerText =
+                payload.nameEng || "-";
+              document.getElementById("view-nicknameEng").innerText =
+                payload.nicknameEng || "-";
+              document.getElementById("view-phone").innerText =
+                payload.phone || "No phone number";
+              document.getElementById("view-type").innerText =
+                getStudentTypeLabel(payload.type);
+              document.getElementById("modal-fullname").innerText =
+                payload.name || "-";
+              document.getElementById("modal-type-badge").innerText =
+                getStudentTypeLabel(payload.type);
+
+              exitEditModeUI();
+              loadStudentList();
+            } else {
+              statusEl.className =
+                "block mt-4 p-3 rounded-xl text-sm font-bold text-center bg-red-50 text-red-600 border border-red-100";
+              statusEl.innerHTML =
+                '<i class="fas fa-exclamation-circle mr-2"></i>' +
+                (res.message || "Something went wrong. Please try again.");
+            }
+          })
+          .catch(() => {
+            btn.disabled = false;
+            btn.innerHTML =
+              '<i class="fas fa-save mr-2 text-sm"></i>Save Changes';
+            const statusEl = document.getElementById("save-status");
+            statusEl.className =
+              "block mt-4 p-3 rounded-xl text-sm font-bold text-center bg-red-50 text-red-600 border border-red-100";
+            statusEl.innerHTML =
+              '<i class="fas fa-exclamation-circle mr-2"></i>Network error. Please try again.';
+          });
+      }
+
+      /* Close modal when clicking backdrop */
+      document
+        .getElementById("detailModal")
+        .addEventListener("click", function (e) {
+          if (e.target === this) closeDetailModal();
+        });
+
+      /* ─── Add Student ─── */
+      let addStudentType = "Course";
+
+      function openAddStudentModal() {
+        [
+          "add-name",
+          "add-nickname",
+          "add-nameEng",
+          "add-nicknameEng",
+          "add-phone",
+        ].forEach((id) => {
+          const el = document.getElementById(id);
+          el.value = "";
+          el.style.borderColor = "";
+          el.style.background = "";
+        });
+        const sel = document.getElementById("add-courseId");
+        sel.value = "";
+        sel.style.borderColor = "";
+        sel.style.background = "";
+
+        setAddStudentType("Course");
+        hideAddSaveStatus();
+        loadCoursesForSelect();
+        document.getElementById("addStudentModal").classList.remove("hidden");
+      }
+
+      function closeAddStudentModal() {
+        document.getElementById("addStudentModal").classList.add("hidden");
+      }
+
+      function setAddStudentType(type) {
+        addStudentType = type;
+        const isCourse = type === "Course";
+        document.getElementById("type-btn-course").className =
+          "flex-1 py-3 rounded-2xl font-bold text-sm transition-all " +
+          (isCourse
+            ? "bg-gray-900 text-white"
+            : "bg-gray-100 text-gray-500 hover:bg-gray-200");
+        document.getElementById("type-btn-regular").className =
+          "flex-1 py-3 rounded-2xl font-bold text-sm transition-all " +
+          (!isCourse
+            ? "bg-gray-900 text-white"
+            : "bg-gray-100 text-gray-500 hover:bg-gray-200");
+        document.getElementById("add-course-field").style.display = isCourse
+          ? "block"
+          : "none";
+
+        // reset สี course dropdown
+        const sel = document.getElementById("add-courseId");
+        sel.style.borderColor = "";
+        sel.style.background = "";
+      }
+
+      function loadCoursesForSelect() {
+        fetch(scriptURL, {
+          method: "POST",
+          body: JSON.stringify({ action: "getCourseData" }),
+        })
+          .then((r) => r.json())
+          .then((res) => {
+            const sel = document.getElementById("add-courseId");
+            sel.innerHTML = '<option value="">— Select course —</option>';
+            (res.data || []).forEach((c) => {
+              const opt = document.createElement("option");
+              opt.value = c.id;
+              opt.textContent = c.name;
+              sel.appendChild(opt);
+            });
+          });
+      }
+
+      function hideAddSaveStatus() {
+        const el = document.getElementById("add-save-status");
+        el.className =
+          "hidden mt-4 p-3 rounded-xl text-sm font-bold text-center";
+      }
+
+      function validateAddStudentForm() {
+        const fields = [
+          "add-name",
+          "add-nickname",
+          "add-nameEng",
+          "add-nicknameEng",
+          "add-phone",
+        ];
+        let isValid = true;
+
+        fields.forEach((id) => {
+          const input = document.getElementById(id);
+          if (!input.value.trim()) {
+            input.style.borderColor = "#ef4444";
+            input.style.background = "#fff1f2";
+            isValid = false;
+          } else {
+            input.style.borderColor = "";
+            input.style.background = "";
+          }
+        });
+
+        if (addStudentType === "Course") {
+          const sel = document.getElementById("add-courseId");
+          if (!sel.value) {
+            sel.style.borderColor = "#ef4444";
+            sel.style.background = "#fff1f2";
+            isValid = false;
+          } else {
+            sel.style.borderColor = "";
+            sel.style.background = "";
+          }
+        }
+
+        return isValid;
+      }
+
+      // reset สีช่องเมื่อกรอกข้อมูล
+      [
+        "add-name",
+        "add-nickname",
+        "add-nameEng",
+        "add-nicknameEng",
+        "add-phone",
+      ].forEach((id) => {
+        document.getElementById(id).addEventListener("input", function () {
+          if (this.value.trim()) {
+            this.style.borderColor = "";
+            this.style.background = "";
+          }
+        });
+      });
+
+      document
+        .getElementById("add-courseId")
+        .addEventListener("change", function () {
+          if (this.value) {
+            this.style.borderColor = "";
+            this.style.background = "";
+          }
+        });
+
+      function submitAddStudent() {
+        if (!validateAddStudentForm()) {
+          const el = document.getElementById("add-save-status");
+          el.className =
+            "block mt-4 p-3 rounded-xl text-sm font-bold text-center bg-red-50 text-red-600 border border-red-100";
+          el.innerHTML =
+            '<i class="fas fa-exclamation-circle mr-2"></i>โปรดกรอกข้อมูลในช่องที่จำเป็นทั้งหมด.';
+          return;
+        }
+
+        const studentName = document.getElementById("add-name").value.trim();
+        const confirmed = confirm(
+          `ยืนยันการเพิ่มนักเรียน?\n\nชื่อ: ${studentName}\nประเภท: ${addStudentType} Class`,
+        );
+        if (!confirmed) return;
+
+        const btn = document.getElementById("add-save-btn");
+        btn.disabled = true;
+        btn.innerHTML =
+          '<i class="fas fa-spinner fa-spin mr-2 text-sm"></i>Adding...';
+
+        const payload = {
+          action:
+            addStudentType === "Course" ? "addStudentWithCourse" : "addStudent",
+          name: document.getElementById("add-name").value.trim(),
+          nickname: document.getElementById("add-nickname").value.trim(),
+          nameEng: document.getElementById("add-nameEng").value.trim(),
+          nicknameEng: document.getElementById("add-nicknameEng").value.trim(),
+          phone: document.getElementById("add-phone").value.trim(),
+          type: addStudentType,
+          courseId:
+            addStudentType === "Course"
+              ? document.getElementById("add-courseId").value
+              : "",
+        };
+
+        fetch(scriptURL, { method: "POST", body: JSON.stringify(payload) })
+          .then((r) => r.json())
+          .then((res) => {
+            btn.disabled = false;
+            btn.innerHTML =
+              '<i class="fas fa-plus mr-2 text-sm"></i>Add Student';
+            const el = document.getElementById("add-save-status");
+            if (res.status === "success") {
+              el.className =
+                "block mt-4 p-3 rounded-xl text-sm font-bold text-center bg-green-50 text-green-600 border border-green-100";
+              el.innerHTML =
+                '<i class="fas fa-check-circle mr-2"></i>Student added successfully!';
+              setTimeout(() => {
+                closeAddStudentModal();
+                loadStudentList(true);
+              }, 1200);
+            } else {
+              el.className =
+                "block mt-4 p-3 rounded-xl text-sm font-bold text-center bg-red-50 text-red-600 border border-red-100";
+              el.innerHTML =
+                '<i class="fas fa-exclamation-circle mr-2"></i>' +
+                (res.message || "Something went wrong.");
+            }
+          })
+          .catch(() => {
+            btn.disabled = false;
+            btn.innerHTML =
+              '<i class="fas fa-plus mr-2 text-sm"></i>Add Student';
+            const el = document.getElementById("add-save-status");
+            el.className =
+              "block mt-4 p-3 rounded-xl text-sm font-bold text-center bg-red-50 text-red-600 border border-red-100";
+            el.innerHTML =
+              '<i class="fas fa-exclamation-circle mr-2"></i>Network error. Please try again.';
+          });
+      }
+
+      document
+        .getElementById("addStudentModal")
+        .addEventListener("click", function (e) {
+          if (e.target === this) closeAddStudentModal();
+        });
+    </script>
+  </body>
+</html>
